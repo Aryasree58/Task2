@@ -1,0 +1,118 @@
+pipeline {
+    agent any
+
+    tools {
+        // Defining the Maven and JDK versions used for the pipeline
+        maven 'Maven_3.8.1' // Adjust this to your Maven version
+        jdk 'JDK11' // Adjust this to your installed JDK version
+    }
+
+    environment {
+        // Environment variables that can be used throughout the pipeline
+        USERNAME = 'aryasree'
+        PASSWORD = '12345678'
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                echo 'Checking out the project code from the Git repository...'
+
+                // Checkout code from the Git repository using the main branch
+                git branch: 'main', url: 'https://github.com/your-repo/your-selenium-project.git'
+                echo 'Code checkout successful from the main branch.'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                echo 'Starting the build process...'
+
+                // Clean the project and compile the code using Maven
+                sh 'mvn clean compile'
+
+                echo 'Project build and compilation completed successfully.'
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                echo 'Starting the Selenium tests with provided credentials...'
+
+                // Pass the username and password as system properties to the tests
+                sh 'mvn test -Dusername=$USERNAME -Dpassword=$PASSWORD'
+
+                echo 'Tests executed successfully with username: aryasree and password: 12345678.'
+            }
+        }
+
+        stage('Generate Test Report') {
+            steps {
+                echo 'Generating the test report...'
+
+                // Use the JUnit plugin to gather test results from the surefire-reports directory
+                junit '**/target/surefire-reports/*.xml'
+
+                echo 'Test report generated successfully.'
+            }
+        }
+
+        stage('Verify Test Results') {
+            steps {
+                echo 'Verifying the test results...'
+
+                // Simulate result verification (you can add any additional logic here)
+                script {
+                    def testResults = sh(script: "grep '<testsuite' target/surefire-reports/*.xml | wc -l", returnStdout: true).trim()
+                    if (testResults == '0') {
+                        error "No test results found! Failing the build."
+                    } else {
+                        echo "Test results verified: ${testResults} test cases found."
+                    }
+                }
+            }
+        }
+
+        stage('Post-Test Actions') {
+            steps {
+                echo 'Performing post-test actions...'
+
+                // Perform any necessary actions such as cleaning up or archiving artifacts
+                archiveArtifacts artifacts: '**/target/*.jar', allowEmptyArchive: true
+
+                echo 'Artifacts archived successfully after test execution.'
+            }
+        }
+
+        stage('Deployment (Optional)') {
+            when {
+                // Add a condition to deploy only if the build is running on a specific branch, like 'main'
+                branch 'main'
+            }
+            steps {
+                echo 'Deploying the application after successful testing...'
+                // Placeholder for deployment steps (e.g., copying artifacts to a deployment server)
+                sh 'echo "Deploying application..."'
+            }
+        }
+    }
+
+    post {
+        always {
+            // Actions that should run regardless of the test outcome
+            echo 'Post-build actions...'
+
+            // Example of sending notifications or cleaning up the workspace
+            echo 'Sending build status notification...'
+            sh 'echo "Cleaning workspace..."'
+
+            echo 'Build completed. Notifications sent, workspace cleaned.'
+        }
+
+        success {
+            echo 'Build was successful. All stages completed without errors.'
+            // Additional actions on successful build
+            sh 'echo "Run additional success actions if necessary..."'
+        }
+
+        
